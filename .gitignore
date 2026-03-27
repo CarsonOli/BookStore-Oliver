@@ -1,0 +1,13 @@
+# Visual Studio
+.vs/
+bin/
+obj/
+node_modules/
+
+# User-specific files
+*.user
+*.suo
+
+# Build results
+*.dll
+*.exe
