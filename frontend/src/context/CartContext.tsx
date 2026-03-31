@@ -1,44 +1,105 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-import type { CartItem } from "../types/CartItem";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { CartItem } from '../types/CartItem';
 
 interface CartContextType {
-    cart: CartItem[];
-    addToCart: (item: CartItem) => void;
-    removeFromCart: (bookId: number) => void;
-    clearCart: () => void;
+  cart: CartItem[];
+  itemCount: number;
+  totalAmount: number;
+  addToCart: (bookId: number, itemQuantity?: number) => Promise<void>;
+  updateQuantity: (bookId: number, itemQuantity: number) => Promise<void>;
+  removeFromCart: (bookId: number) => Promise<void>;
+  clearCart: () => Promise<void>;
+  refreshCart: () => Promise<void>;
+}
+
+interface CartApiResponse {
+  items: CartItem[];
+  itemCount: number;
+  totalAmount: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const cartApiUrl = 'https://localhost:5000/api/Cart';
 
-export const CartProvider = ({ children }: {children: ReactNode}) => {
-    const [cart, setCart] = useState<CartItem[]>([]);
-    const addToCart = (item: CartItem) => {
-        setCart((prevCart) => {
-            const existingItem = prevCart.find((c) => c.bookId === item.bookId);
-            const updatedCart = prevCart.map((c) => 
-                c.bookId === item.bookId ? {...c, itemQuantity: c.itemQuantity + item.itemQuantity} : c);
+export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [itemCount, setItemCount] = useState<number>(0);
+  const [totalAmount, setTotalAmount] = useState<number>(0);
 
-            return existingItem ? updatedCart : [...prevCart, item];
-        });
-    };
-    const removeFromCart = (bookId: number) => {
-        setCart((prevCart) => prevCart.filter((c) => c.bookId !== bookId));
-    };
-    const clearCart = () => {
-        setCart(() => []);
-    };
+  const syncCart = (response: CartApiResponse) => {
+    setCart(response.items);
+    setItemCount(response.itemCount);
+    setTotalAmount(response.totalAmount);
+  };
 
-    return (
-        <CartContext.Provider value={{cart, addToCart, removeFromCart, clearCart}}>
-            {children}
-        </CartContext.Provider>
-    );
+  const refreshCart = async () => {
+    const response = await fetch(cartApiUrl, {
+      credentials: 'include',
+    });
+
+    const data: CartApiResponse = await response.json();
+    syncCart(data);
+  };
+
+  useEffect(() => {
+    refreshCart().catch((error) => {
+      console.error('Unable to load cart', error);
+    });
+  }, []);
+
+  const postCart = async (url: string, body?: unknown) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+    const data: CartApiResponse = await response.json();
+    syncCart(data);
+  };
+
+  const addToCart = async (bookId: number, itemQuantity = 1) => {
+    await postCart(`${cartApiUrl}/Add`, { bookId, itemQuantity });
+  };
+
+  const updateQuantity = async (bookId: number, itemQuantity: number) => {
+    await postCart(`${cartApiUrl}/UpdateQuantity`, { bookId, itemQuantity });
+  };
+
+  const removeFromCart = async (bookId: number) => {
+    await postCart(`${cartApiUrl}/Remove/${bookId}`);
+  };
+
+  const clearCart = async () => {
+    await postCart(`${cartApiUrl}/Clear`);
+  };
+
+  const value = useMemo(
+    () => ({
+      cart,
+      itemCount,
+      totalAmount,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
+      refreshCart,
+    }),
+    [cart, itemCount, totalAmount],
+  );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => {
-    const context = useContext(CartContext);
-    if (!context) {
-        throw new Error('useCart must be used within a CartProvider');
-    }
-    return context;
+  const context = useContext(CartContext);
+
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+
+  return context;
 };

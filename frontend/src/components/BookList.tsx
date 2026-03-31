@@ -1,73 +1,135 @@
 import { useEffect, useState } from 'react';
 import type { Book } from '../types/Book';
-import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
-function BookList({selectedCategories}: {selectedCategories: string[]}) {
+function BookList({
+  selectedCategory,
+  sortBy,
+  onOpenCart,
+}: {
+  selectedCategory: string;
+  sortBy: string;
+  onOpenCart: () => void;
+}) {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageNum, setPageNum] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const { addToCart } = useCart();
 
-    const [books, setBooks] = useState<Book[]>([]);
-    const [pageSize, setPageSize] = useState<number>(10);
-    const [pageNum, setPageNum] = useState<number>(1);
-    const [totalItems, setTotalItems] = useState<number>(0);
-    const [totalPages, setTotalPages] = useState<number>(0);
-    const navigate = useNavigate();
+  useEffect(() => {
+    setPageNum(1);
+  }, [selectedCategory, sortBy, pageSize]);
 
-    useEffect(() => {
-        const fetchBooks = async () => {
+  useEffect(() => {
+    const fetchBooks = async () => {
+      setIsLoading(true);
+      setError('');
 
-            const categoryParams = selectedCategories.map((cat) => `bookCategories=${encodeURIComponent(cat)}`).join('&')
-            const response = await fetch(`https://localhost:5000/api/Book/AllBooks?pageSize=${pageSize}&pageNum=${pageNum}${selectedCategories.length ? `&${categoryParams}` : ''}`);
-            const data = await response.json();
-            setBooks(data.books);
-            setTotalItems(data.totalBooks);
-            setTotalPages(Math.ceil(totalItems / pageSize))
-        };
+      try {
+        const params = new URLSearchParams({
+          pageSize: pageSize.toString(),
+          pageNum: pageNum.toString(),
+          sortBy,
+        });
 
-        fetchBooks();
-    }, [pageSize, pageNum, totalItems, selectedCategories]);
+        if (selectedCategory !== 'All') {
+          params.append('bookCategories', selectedCategory);
+        }
 
-    return (
-        <>
-            <br />
-            {books.map((b) => (
-                <div id="bookCard" className="card" key={b.bookId}>
-                    <h3 className="card-title">{b.title}</h3>
-                    <div className="card-body">
-                        <ul className="list-unstyled">
-                            <li><strong>Author: </strong>{b.author}</li>
-                            <li><strong>Category: </strong>{b.category}</li>
-                            <li><strong>Classification: </strong>{b.classification}</li>
-                            <li><strong>Publisher: </strong>{b.publisher}</li>
-                            <li><strong>ISBN: </strong>{b.isbn}</li>
-                            <li><strong>Page Count: </strong>{b.pageCount}</li>
-                            <li><strong>Price: $</strong>{b.price}</li>
-                        </ul>
+        const response = await fetch(`https://localhost:5000/api/Book/AllBooks?${params.toString()}`);
+        const data = await response.json();
+        setBooks(data.books);
+        setTotalPages(Math.max(1, Math.ceil(data.totalBooks / pageSize)));
+      } catch (fetchError) {
+        console.error(fetchError);
+        setError('Unable to load books right now.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-                        <button className="btn btn-success" onClick={() => navigate(`/purchase/${b.title}/${b.bookId}/${b.price}`)}>Add to Cart</button>
-                    </div>
+    fetchBooks();
+  }, [pageNum, pageSize, selectedCategory, sortBy]);
+
+  const handleAddToCart = async (bookId: number) => {
+    await addToCart(bookId, 1);
+    onOpenCart();
+  };
+
+  return (
+    <>
+      {isLoading && <p className="text-muted">Loading books...</p>}
+      {error && <div className="alert alert-danger">{error}</div>}
+
+      <div className="row g-3">
+        {books.map((b) => (
+          <div className="col-lg-6" key={b.bookId}>
+            <div className="card h-100 shadow-sm border-0">
+              <div className="card-body d-flex flex-column">
+                <div className="d-flex justify-content-between align-items-start mb-3">
+                  <h3 className="h5 card-title mb-0">{b.title}</h3>
+                  <span className="badge text-bg-primary ms-2">${b.price.toFixed(2)}</span>
                 </div>
-            ))}
-            <div>
-                <button disabled={pageNum === 1} onClick={() => setPageNum(pageNum - 1)}>Previous</button>
 
-                {[...Array(totalPages)].map((_, index) => (
-                    <button key={index + 1} onClick={() => setPageNum(index + 1)} disabled={pageNum === (index + 1)}>{index + 1}</button>
-                ))}
+                <ul className="list-unstyled small mb-4">
+                  <li><strong>Author:</strong> {b.author}</li>
+                  <li><strong>Category:</strong> {b.category}</li>
+                  <li><strong>Classification:</strong> {b.classification}</li>
+                  <li><strong>Publisher:</strong> {b.publisher}</li>
+                  <li><strong>ISBN:</strong> {b.isbn}</li>
+                  <li><strong>Page Count:</strong> {b.pageCount}</li>
+                </ul>
 
-                <button disabled={pageNum === totalPages} onClick={() => setPageNum(pageNum + 1)}>Next</button>
+                <button className="btn btn-success mt-auto" onClick={() => handleAddToCart(b.bookId)}>
+                  Add to Cart
+                </button>
+              </div>
             </div>
-            <br />
-            <label>
-                Results per page:
-                <select value={pageSize} onChange={(p) => {
-                                            setPageSize(Number(p.target.value));
-                                            setPageNum(1)}}>
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                </select>
-            </label>
-        </>
-    );
+          </div>
+        ))}
+      </div>
+
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mt-4">
+        <div className="btn-group" role="group" aria-label="Pagination">
+          <button className="btn btn-outline-secondary" disabled={pageNum === 1} onClick={() => setPageNum(pageNum - 1)}>
+            Previous
+          </button>
+
+          {[...Array(totalPages)].map((_, index) => (
+            <button
+              key={index + 1}
+              className={`btn ${pageNum === index + 1 ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setPageNum(index + 1)}
+            >
+              {index + 1}
+            </button>
+          ))}
+
+          <button className="btn btn-outline-secondary" disabled={pageNum === totalPages} onClick={() => setPageNum(pageNum + 1)}>
+            Next
+          </button>
+        </div>
+
+        <div className="d-flex align-items-center gap-2">
+          <label className="form-label mb-0" htmlFor="pageSize">Results per page</label>
+          <select
+            id="pageSize"
+            className="form-select"
+            style={{ width: 'auto' }}
+            value={pageSize}
+            onChange={(event) => setPageSize(Number(event.target.value))}
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+          </select>
+        </div>
+      </div>
+    </>
+  );
 }
 
 export default BookList;

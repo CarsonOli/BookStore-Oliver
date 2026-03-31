@@ -1,5 +1,4 @@
-﻿using BooksNMore.API.Data;
-using Microsoft.AspNetCore.Http;
+using BooksNMore.API.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,36 +8,65 @@ namespace BooksNMore.API.Controllers
     [ApiController]
     public class BookController : ControllerBase
     {
-        private BookDbContext _context;
+        private readonly BookDbContext _context;
+
         public BookController(BookDbContext temp) => _context = temp;
 
         [HttpGet("AllBooks")]
-        public IActionResult GetBooks(int pageSize = 10, int pageNum = 1, [FromQuery] List<string>? bookCategories = null)
+        public async Task<IActionResult> GetBooks(
+            int pageSize = 10,
+            int pageNum = 1,
+            [FromQuery] List<string>? bookCategories = null,
+            string sortBy = "title")
         {
-            var query = _context.Books.AsQueryable();
+            if (pageSize <= 0)
+            {
+                pageSize = 10;
+            }
+
+            if (pageNum <= 0)
+            {
+                pageNum = 1;
+            }
+
+            IQueryable<Book> query = _context.Books.AsNoTracking();
 
             if (bookCategories != null && bookCategories.Any())
             {
                 query = query.Where(x => bookCategories.Contains(x.Category));
             }
 
-            var totalBooks = query.Count();
-
-            var book = query.Skip((pageNum-1) * pageSize).Take(pageSize).ToList();
-
-            var someObject = new
+            query = sortBy.ToLowerInvariant() switch
             {
-                TotalBooks = totalBooks,
-                Books = book
+                "title_desc" => query.OrderByDescending(x => x.Title),
+                "title" => query.OrderBy(x => x.Title),
+                _ => query.OrderBy(x => x.Title)
             };
 
-            return Ok(someObject);
+            var totalBooks = await query.CountAsync();
+
+            var books = await query
+                .Skip((pageNum - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                TotalBooks = totalBooks,
+                Books = books
+            });
         }
 
         [HttpGet("GetCategories")]
-        public IActionResult GetCategories ()
+        public async Task<IActionResult> GetCategories()
         {
-            var categories = _context.Books.Select(x => x.Category).Distinct().ToList();
+            var categories = await _context.Books
+                .AsNoTracking()
+                .Select(x => x.Category)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
+
             return Ok(categories);
         }
     }
