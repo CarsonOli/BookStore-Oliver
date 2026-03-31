@@ -47,7 +47,16 @@ function BookList({
         }
 
         const data = await response.json();
-        setBooks(data.books);
+
+        const sortedBooks = [...data.books];
+
+        if (sortBy === 'title_asc') {
+          sortedBooks.sort((a: Book, b: Book) => a.title.localeCompare(b.title));
+        } else if (sortBy === 'title_desc') {
+          sortedBooks.sort((a: Book, b: Book) => b.title.localeCompare(a.title));
+        }
+
+        setBooks(sortedBooks);
         setTotalPages(Math.max(1, Math.ceil(data.totalBooks / pageSize)));
       } catch (fetchError) {
         console.error(fetchError);
@@ -68,7 +77,11 @@ function BookList({
       onOpenCart();
     } catch (error) {
       console.error(error);
-      setCartError('Unable to add this book to the cart.');
+      if (error instanceof Error) {
+        setCartError(error.message);
+      } else {
+        setCartError('Unable to add this book to the cart.');
+      }
     }
   };
 
