@@ -1,6 +1,7 @@
 ﻿using BooksNMore.API.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BooksNMore.API.Controllers
 {
@@ -12,11 +13,18 @@ namespace BooksNMore.API.Controllers
         public BookController(BookDbContext temp) => _context = temp;
 
         [HttpGet("AllBooks")]
-        public IActionResult GetBooks(int pageSize = 10, int pageNum = 1)
+        public IActionResult GetBooks(int pageSize = 10, int pageNum = 1, [FromQuery] List<string>? bookCategories = null)
         {
-            var book = _context.Books.Skip((pageNum-1) * pageSize).Take(pageSize).ToList();
+            var query = _context.Books.AsQueryable();
 
-            var totalBooks = _context.Books.Count();
+            if (bookCategories != null && bookCategories.Any())
+            {
+                query = query.Where(x => bookCategories.Contains(x.Category));
+            }
+
+            var totalBooks = query.Count();
+
+            var book = query.Skip((pageNum-1) * pageSize).Take(pageSize).ToList();
 
             var someObject = new
             {
@@ -25,6 +33,13 @@ namespace BooksNMore.API.Controllers
             };
 
             return Ok(someObject);
+        }
+
+        [HttpGet("GetCategories")]
+        public IActionResult GetCategories ()
+        {
+            var categories = _context.Books.Select(x => x.Category).Distinct().ToList();
+            return Ok(categories);
         }
     }
 }
