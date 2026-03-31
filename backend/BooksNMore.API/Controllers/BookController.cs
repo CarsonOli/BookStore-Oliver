@@ -17,7 +17,7 @@ namespace BooksNMore.API.Controllers
             int pageSize = 10,
             int pageNum = 1,
             [FromQuery] List<string>? bookCategories = null,
-            string sortBy = "title")
+            string sortBy = "default")
         {
             if (pageSize <= 0)
             {
@@ -38,9 +38,9 @@ namespace BooksNMore.API.Controllers
 
             query = sortBy.ToLowerInvariant() switch
             {
+                "title_asc" => query.OrderBy(x => x.Title),
                 "title_desc" => query.OrderByDescending(x => x.Title),
-                "title" => query.OrderBy(x => x.Title),
-                _ => query.OrderBy(x => x.Title)
+                _ => query
             };
 
             var totalBooks = await query.CountAsync();

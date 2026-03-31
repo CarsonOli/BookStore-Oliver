@@ -37,6 +37,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       credentials: 'include',
     });
 
+    if (!response.ok) {
+      throw new Error(`Unable to load cart: ${response.status}`);
+    }
+
     const data: CartApiResponse = await response.json();
     syncCart(data);
   };
@@ -56,6 +60,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `Cart request failed: ${response.status}`);
+    }
 
     const data: CartApiResponse = await response.json();
     syncCart(data);

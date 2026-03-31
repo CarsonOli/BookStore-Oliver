@@ -7,7 +7,7 @@ import WelcomeBand from '../components/WelcomeBand';
 
 function BooksPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<string>('title');
+  const [sortBy, setSortBy] = useState<string>('default');
   const [cartOpen, setCartOpen] = useState<boolean>(false);
 
   return (
@@ -36,7 +36,8 @@ function BooksPage() {
                     value={sortBy}
                     onChange={(event) => setSortBy(event.target.value)}
                   >
-                    <option value="title">Title (A-Z)</option>
+                    <option value="default">Default Order</option>
+                    <option value="title_asc">Title (A-Z)</option>
                     <option value="title_desc">Title (Z-A)</option>
                   </select>
                 </div>

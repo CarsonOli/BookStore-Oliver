@@ -17,6 +17,7 @@ function BookList({
   const [totalPages, setTotalPages] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [cartError, setCartError] = useState<string>('');
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -40,6 +41,11 @@ function BookList({
         }
 
         const response = await fetch(`https://localhost:5000/api/Book/AllBooks?${params.toString()}`);
+
+        if (!response.ok) {
+          throw new Error(`Book request failed: ${response.status}`);
+        }
+
         const data = await response.json();
         setBooks(data.books);
         setTotalPages(Math.max(1, Math.ceil(data.totalBooks / pageSize)));
@@ -55,14 +61,22 @@ function BookList({
   }, [pageNum, pageSize, selectedCategory, sortBy]);
 
   const handleAddToCart = async (bookId: number) => {
-    await addToCart(bookId, 1);
-    onOpenCart();
+    setCartError('');
+
+    try {
+      await addToCart(bookId, 1);
+      onOpenCart();
+    } catch (error) {
+      console.error(error);
+      setCartError('Unable to add this book to the cart.');
+    }
   };
 
   return (
     <>
       {isLoading && <p className="text-muted">Loading books...</p>}
       {error && <div className="alert alert-danger">{error}</div>}
+      {cartError && <div className="alert alert-danger">{cartError}</div>}
 
       <div className="row g-3">
         {books.map((b) => (
