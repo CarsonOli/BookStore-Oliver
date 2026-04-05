@@ -2,11 +2,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import WelcomeBand from "../components/WelcomeBand";
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
-import type { CartItem } from "../types/CartItem";
 
 function PurchasePage() {
     const navigate = useNavigate();
-    const {title, bookId, price} = useParams();
+    const {title, bookId} = useParams();
     const {addToCart} = useCart();
     const [itemQuantity, setItemQuantity] = useState<number>(0);
 
