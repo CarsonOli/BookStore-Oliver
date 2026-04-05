@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { Book } from '../types/Book';
 import { useCart } from '../context/CartContext';
+import { API_BASE_URL } from '../api/config';
+import type { Book } from '../types/Book';
 
 function BookList({
   selectedCategory,
@@ -40,7 +41,7 @@ function BookList({
           params.append('bookCategories', selectedCategory);
         }
 
-        const response = await fetch(`https://localhost:5000/api/Book/AllBooks?${params.toString()}`);
+        const response = await fetch(`${API_BASE_URL}/api/Book/AllBooks?${params.toString()}`);
 
         if (!response.ok) {
           throw new Error(`Book request failed: ${response.status}`);

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { API_BASE_URL } from '../api/config';
 import type { CartItem } from '../types/CartItem';
 
 interface CartContextType {
@@ -19,7 +20,7 @@ interface CartApiResponse {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
-const cartApiUrl = 'https://localhost:5000/api/Cart';
+const cartApiUrl = `${API_BASE_URL}/api/Cart`;
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);

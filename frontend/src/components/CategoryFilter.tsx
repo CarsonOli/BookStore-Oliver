@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../api/config';
 import './CategoryFilter.css';
 
 function CategoryFilter({
@@ -13,7 +14,7 @@ function CategoryFilter({
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('https://localhost:5000/api/Book/GetCategories');
+        const response = await fetch(`${API_BASE_URL}/api/Book/GetCategories`);
         const data = await response.json();
         setCategories(data);
       } catch (error) {

@@ -11,13 +11,14 @@ function PurchasePage() {
     const [itemQuantity, setItemQuantity] = useState<number>(0);
 
     const handleAddToCart = () => {
-        const newItem: CartItem = {
-            bookId: Number(bookId), 
-            title: title || 'No Title Found', 
-            price: Number(price) || 0, 
-            itemQuantity}
-            addToCart(newItem);
-            navigate('/cart');
+        const bookIdNumber = Number(bookId);
+
+        if (Number.isNaN(bookIdNumber)) {
+            return;
+        }
+
+        addToCart(bookIdNumber);
+        navigate('/cart');
     }
 
     return (
